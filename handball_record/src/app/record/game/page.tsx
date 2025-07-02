@@ -1,8 +1,7 @@
-// ./app/record/game/page.tsx
-
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -24,12 +23,16 @@ type Game = {
   Team2?: string;
   Game_Type?: string;
   Group?: string;
+  Win?: string;
+  Lose?: string;
+  Score?: string;
 };
 
 export default function GameListPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [editing, setEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchGames = async () => {
@@ -72,6 +75,7 @@ export default function GameListPage() {
         <table className="w-full text-sm border text-left">
           <thead className="bg-gray-100">
             <tr>
+              <th className="p-2 border">紀錄</th>
               <th className="p-2 border">#</th>
               <th className="p-2 border">日期</th>
               <th className="p-2 border">時間</th>
@@ -79,11 +83,30 @@ export default function GameListPage() {
               <th className="p-2 border">隊伍</th>
               <th className="p-2 border">類型</th>
               <th className="p-2 border">組別</th>
+              <th className="p-2 border">勝隊</th>
+              <th className="p-2 border">敗隊</th>
+              <th className="p-2 border">比分</th>
             </tr>
           </thead>
           <tbody>
             {games.map((g) => (
               <tr key={g.id} className="border-b">
+                <td className="border px-2 py-1">
+                    {editing ? (
+                        <div
+                        className="bg-indigo-500 text-white rounded px-2 py-1"
+                        >
+                        開始記錄
+                        </div>
+                    ) : (
+                        <Button
+                        className="bg-indigo-500 text-white rounded px-2 py-1"
+                        onClick={() => router.push(`/record/game/${g.Game_Number}`)}
+                        >
+                        開始記錄
+                        </Button>
+                    )}
+                </td>
                 <td className="p-2 border">
                   {editing ? (
                     <Input
@@ -164,6 +187,36 @@ export default function GameListPage() {
                   ) : (
                     g.Group
                   )}
+                </td>
+                <td className="p-2 border whitespace-nowrap">
+                    {editing ? (
+                        <Input
+                        value={g.Win ?? ""}
+                        onChange={(e) => handleChange(g.id, "Win", e.target.value)}
+                        />
+                    ) : (
+                        g.Win ?? ""
+                    )}
+                    </td>
+                    <td className="p-2 border whitespace-nowrap">
+                    {editing ? (
+                        <Input
+                        value={g.Lose ?? ""}
+                        onChange={(e) => handleChange(g.id, "Lose", e.target.value)}
+                        />
+                    ) : (
+                        g.Lose ?? ""
+                    )}
+                </td>
+                <td className="p-2 border whitespace-nowrap">
+                    {editing ? (
+                        <Input
+                        value={g.Score ?? ""}
+                        onChange={(e) => handleChange(g.id, "Score", e.target.value)}
+                        />
+                    ) : (
+                        g.Score ?? ""
+                    )}
                 </td>
               </tr>
             ))}

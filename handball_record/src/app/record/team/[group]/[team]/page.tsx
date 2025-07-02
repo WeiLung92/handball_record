@@ -45,6 +45,21 @@ interface Player {
   [key: string]: any;
 }
 
+interface Game {
+  id: string;
+  Game_Number?: number;
+  Date?: string;
+  Time?: string;
+  Location?: string;
+  Team1?: string;
+  Team2?: string;
+  Game_Type?: string;
+  Group?: string;
+  Win?: string;
+  Lose?: string;
+  Score?: string;
+}
+
 export default function TeamDetailPage() {
   const params = useParams();
   const group = decodeURIComponent(params.group as string);
@@ -54,12 +69,17 @@ export default function TeamDetailPage() {
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [games, setGames] = useState<Game[]>([]);
+  const [showGames, setShowGames] = useState(false);
 
   useEffect(() => {
     const fetchPlayers = async () => {
       const snapshot = await getDocs(collection(db, "players"));
       const allPlayers = snapshot.docs
-        .map((doc) => ({id: doc.id, ...(doc.data() as Player)}))
+        .map((doc) => {
+          const data = doc.data() as Player;
+          return { ...data, id: doc.id };
+        })
         .filter(
           (p) =>
             (p.Group === group) &&
@@ -72,7 +92,7 @@ export default function TeamDetailPage() {
       );
 
       coaches = coaches.sort((a, b) => (parseInt(a.ID) || 0) - (parseInt(b.ID) || 0));
-      playersOnly = playersOnly.sort((a, b) => (parseInt(a.Jersey_Number) || 0) - (parseInt(b.Jersey_Number) || 0));
+      playersOnly = playersOnly.sort((a, b) => (parseInt(b.Jersey_Number) || 0) - (parseInt(a.Jersey_Number) || 0));
 
       const seenNo = new Set<string>();
       const unique = [...coaches, ...playersOnly].filter((p) => {
@@ -88,6 +108,21 @@ export default function TeamDetailPage() {
 
     fetchPlayers();
   }, [group, team]);
+
+  useEffect(() => {
+    const fetchGames = async () => {
+      const snapshot = await getDocs(collection(db, "games"));
+      const data = snapshot.docs
+        .map((doc) => {
+          const data = doc.data() as Game;
+          return { ...data, id: doc.id };
+        })
+        .filter((g) => g.Team1 === team || g.Team2 === team)
+        .sort((a, b) => (a.Game_Number ?? 0) - (b.Game_Number ?? 0));
+      setGames(data);
+    };
+    fetchGames();
+  }, [team]);
 
   const handleInputChange = (index: number, key: string, value: string) => {
     const updated = [...editablePlayers];
@@ -107,7 +142,7 @@ export default function TeamDetailPage() {
         }
 
         const docRef = doc(db, "players", player.id);
-        const { id, ...dataToSave } = player;
+        const { id: _, ...dataToSave } = player;
 
         console.log("Saving player to Firestore:", docRef.path, dataToSave);
         await setDoc(docRef, dataToSave);
@@ -157,9 +192,53 @@ export default function TeamDetailPage() {
             </button>
           </>
         )}
+
+        <button
+          className="bg-purple-500 hover:bg-purple-600 text-white font-semibold px-4 py-2 rounded"
+          onClick={() => setShowGames(!showGames)}
+        >
+          賽程
+        </button>
       </div>
 
       {message && <p className="text-center text-sm text-gray-600">{message}</p>}
+
+      {showGames && (
+        <div className="overflow-x-auto border border-gray-300">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="px-2 py-1 border">#</th>
+                <th className="px-2 py-1 border">日期</th>
+                <th className="px-2 py-1 border">時間</th>
+                <th className="px-2 py-1 border">場地</th>
+                <th className="px-2 py-1 border">隊伍</th>
+                <th className="px-2 py-1 border">類型</th>
+                <th className="px-2 py-1 border">組別</th>
+                <th className="px-2 py-1 border">勝隊</th>
+                <th className="px-2 py-1 border">負隊</th>
+                <th className="px-2 py-1 border">比分</th>
+              </tr>
+            </thead>
+            <tbody>
+              {games.map((g) => (
+                <tr key={g.id} className="even:bg-gray-50">
+                  <td className="px-2 py-1 border">{g.Game_Number}</td>
+                  <td className="px-2 py-1 border">{g.Date}</td>
+                  <td className="px-2 py-1 border">{g.Time}</td>
+                  <td className="px-2 py-1 border">{g.Location}</td>
+                  <td className="px-2 py-1 border">{g.Team1} vs {g.Team2}</td>
+                  <td className="px-2 py-1 border">{g.Game_Type}</td>
+                  <td className="px-2 py-1 border">{g.Group}</td>
+                  <td className="px-2 py-1 border">{g.Win ?? ""}</td>
+                  <td className="px-2 py-1 border">{g.Lose ?? ""}</td>
+                  <td className="px-2 py-1 border">{g.Score ?? ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm border border-gray-300">

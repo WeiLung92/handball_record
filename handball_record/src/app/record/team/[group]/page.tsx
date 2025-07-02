@@ -75,6 +75,9 @@ export default function GroupTeamPage() {
                   <th className="p-2 border">場地</th>
                   <th className="p-2 border">類型</th>
                   <th className="p-2 border">隊伍</th>
+                  <th className="p-2 border">勝隊</th>
+                  <th className="p-2 border">敗隊</th>
+                  <th className="p-2 border">比分</th>
                 </tr>
               </thead>
               <tbody>
@@ -91,6 +94,9 @@ export default function GroupTeamPage() {
                     <td className="p-2 border">
                       {game.Team1} vs {game.Team2}
                     </td>
+                    <td className="p-2 border">{game.Win ?? ""}</td>
+                    <td className="p-2 border">{game.Lose ?? ""}</td>
+                    <td className="p-2 border">{game.Score ?? ""}</td>
                   </tr>
                 ))}
               </tbody>

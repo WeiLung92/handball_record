@@ -1,9 +1,9 @@
-export default function LoginLayout({ children }: { children: React.ReactNode }) {
+export default function RecordLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="bg-white shadow-md rounded-lg p-8 w-full max-w-md">
+    <div className="min-h-screen bg-gray-100 p-6">
+      {/* <div className="max-w-2xl mx-auto bg-white shadow-md rounded-md p-6"> */}
         {children}
-      </div>
+      {/* </div> */}
     </div>
   );
 }

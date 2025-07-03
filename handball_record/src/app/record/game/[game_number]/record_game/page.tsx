@@ -8,7 +8,7 @@ export default function RecordPage() {
 
   return (
     <div className="text-center space-y-4">
-      hey
+      <h1 className="text-2xl font-bold">hey</h1>
     </div>
   );
 }

@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-type Game = {
+interface Game {
   id: string;
   Game_Number?: number;
   Date: string;
@@ -26,12 +26,13 @@ type Game = {
   Win?: string;
   Lose?: string;
   Score?: string;
-};
+}
 
 export default function GameListPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [editing, setEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [navigatingGame, setNavigatingGame] = useState<number | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -92,20 +93,22 @@ export default function GameListPage() {
             {games.map((g) => (
               <tr key={g.id} className="border-b">
                 <td className="border px-2 py-1">
-                    {editing ? (
-                        <div
-                        className="bg-indigo-500 text-white rounded px-2 py-1"
-                        >
-                        開始記錄
-                        </div>
-                    ) : (
-                        <Button
-                        className="bg-indigo-500 text-white rounded px-2 py-1"
-                        onClick={() => router.push(`/record/game/${g.Game_Number}`)}
-                        >
-                        開始記錄
-                        </Button>
-                    )}
+                  {editing || navigatingGame !== null ? (
+                    <div className="bg-indigo-500 text-white rounded px-2 py-1 opacity-50 cursor-not-allowed">
+                      準備開始記錄
+                    </div>
+                  ) : (
+                    <Button
+                      className="bg-indigo-500 text-white rounded px-2 py-1"
+                      disabled={navigatingGame !== null}
+                      onClick={() => {
+                        setNavigatingGame(g.Game_Number ?? null);
+                        router.push(`/record/game/${g.Game_Number}`);
+                      }}
+                    >
+                      準備開始記錄
+                    </Button>
+                  )}
                 </td>
                 <td className="p-2 border">
                   {editing ? (
@@ -189,34 +192,34 @@ export default function GameListPage() {
                   )}
                 </td>
                 <td className="p-2 border whitespace-nowrap">
-                    {editing ? (
-                        <Input
-                        value={g.Win ?? ""}
-                        onChange={(e) => handleChange(g.id, "Win", e.target.value)}
-                        />
-                    ) : (
-                        g.Win ?? ""
-                    )}
-                    </td>
-                    <td className="p-2 border whitespace-nowrap">
-                    {editing ? (
-                        <Input
-                        value={g.Lose ?? ""}
-                        onChange={(e) => handleChange(g.id, "Lose", e.target.value)}
-                        />
-                    ) : (
-                        g.Lose ?? ""
-                    )}
+                  {editing ? (
+                    <Input
+                      value={g.Win ?? ""}
+                      onChange={(e) => handleChange(g.id, "Win", e.target.value)}
+                    />
+                  ) : (
+                    g.Win ?? ""
+                  )}
                 </td>
                 <td className="p-2 border whitespace-nowrap">
-                    {editing ? (
-                        <Input
-                        value={g.Score ?? ""}
-                        onChange={(e) => handleChange(g.id, "Score", e.target.value)}
-                        />
-                    ) : (
-                        g.Score ?? ""
-                    )}
+                  {editing ? (
+                    <Input
+                      value={g.Lose ?? ""}
+                      onChange={(e) => handleChange(g.id, "Lose", e.target.value)}
+                    />
+                  ) : (
+                    g.Lose ?? ""
+                  )}
+                </td>
+                <td className="p-2 border whitespace-nowrap">
+                  {editing ? (
+                    <Input
+                      value={g.Score ?? ""}
+                      onChange={(e) => handleChange(g.id, "Score", e.target.value)}
+                    />
+                  ) : (
+                    g.Score ?? ""
+                  )}
                 </td>
               </tr>
             ))}

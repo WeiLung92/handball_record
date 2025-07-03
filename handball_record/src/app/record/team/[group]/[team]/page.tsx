@@ -117,7 +117,7 @@ export default function TeamDetailPage() {
           const data = doc.data() as Game;
           return { ...data, id: doc.id };
         })
-        .filter((g) => g.Team1 === team || g.Team2 === team)
+        .filter((g) => (g.Team1 === team || g.Team2 === team) && g.Group === group)
         .sort((a, b) => (a.Game_Number ?? 0) - (b.Game_Number ?? 0));
       setGames(data);
     };

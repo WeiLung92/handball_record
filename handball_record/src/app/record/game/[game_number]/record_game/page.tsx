@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { db } from "@/lib/firebase";
 import { doc, collection, getDocs, updateDoc } from "firebase/firestore";
 import { useParams } from "next/navigation";
+import { stringify } from "querystring";
 
 interface Player {
   id?: string;
@@ -318,10 +319,70 @@ export default function Home() {
       </table>
   );
 
+  const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isHoveringAllowed, setIsHoveringAllowed] = useState(false);
+  const r = 6;
+  const w = 60;
+  const h = 30;
+  const sixmeterData = [
+    `m ${7.5 * r} ${0 * r}`,
+    `c ${0 * r} ${12 * r} ${6 * r} ${18 * r} ${18 * r} ${18 * r}`,
+    `l ${9 * r} ${0 * r}`,
+    `c ${12 * r} ${0 * r} ${18 * r} ${-6 * r} ${18 * r} ${-18 * r}`
+  ].join(" ");
+  const ninemeterData = [
+    `m ${0 * r} ${0 * r}`,
+    `l ${0 * r} ${9 * r}`,
+    `c ${0 * r} ${12 * r} ${13.5 * r} ${18 * r} ${25.5 * r} ${18 * r}`,
+    `l ${9 * r} ${0 * r}`,
+    `c ${12 * r} ${0 * r} ${27 * r} ${-6 * r} ${27 * r} ${-18 * r}`,
+    `l ${0 * r} ${-9 * r}`
+  ].join(" ");
+
+  const checkIsBetween = (x: number, y: number) => {
+    const centerX = 30*r;
+    const y6 = 18*r;
+    const y9 = 27*r;
+    const dx = x - centerX;
+    const absDx = Math.abs(dx);
+    const flatWidth = 9*r;
+    const flatHalf = flatWidth / 2;
+
+    const inside6m =
+      (absDx <= flatHalf && y <= y6) ||
+      (absDx > flatHalf && Math.hypot(absDx - flatHalf, y) <= y6);
+
+    const inside9m =
+      (absDx <= flatHalf + 75 && y <= y9) ||
+      (absDx > flatHalf + 75 && Math.hypot(absDx - (flatHalf + 75), y) <= y9);
+
+    return !inside6m && x >= 0 && x <= 60*r && y >= 0 && y <= 40*r;
+  };
+
+  const handleChoosePositioon = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
+    const svg = e.currentTarget;
+    const rect = svg.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (checkIsBetween(x, y)) {
+      setClickPosition({ x, y });
+      console.log("Valid click at:", { x, y });
+    }
+  };
+  
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
+    const svg = e.currentTarget;
+    const rect = svg.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setIsHoveringAllowed(checkIsBetween(x, y));
+  };
+
   return (
     <div className="h-screen w-screen p-2">
       <ResizablePanelGroup direction="vertical" className="min-h-full w-full border rounded">
-        <ResizablePanel defaultSize={62} minSize={15} className="p-1">
+        <ResizablePanel defaultSize={65} minSize={15} className="p-1">
           <div className="flex h-full w-full gap-2">
             <ResizablePanelGroup direction="horizontal" className="w-full">
               <ResizablePanel defaultSize={12} minSize={10} className="">
@@ -334,43 +395,97 @@ export default function Home() {
                   <Button variant="outline" size="sm" onClick={handlePeriodEnd}>半時結束</Button>
                   <Button variant="outline" size="sm" onClick={handleResume}>時間繼續</Button>
                   <Button variant="outline" size="sm" onClick={handlePause}>時間暫停</Button>
+                  <div className="font-medium text-xs">
+                    場次: {gameNumber}
+                  </div>
+                  <div className="flex flex-row text-xs font-bold">
+                    <div className="absolute left-3">
+                      <button
+                        onClick={() => setShowResetDialog(true)}
+                        className="mr-1 w-4 h-4 rounded-full bg-red-500 hover:bg-red-700 text-white text-xs"
+                        title="Reset Timer"
+                      >
+                        R
+                      </button>
+                    </div>
+                    <div>
+                      {formatTime(time)}
+                    </div>
+                  </div>
                 </div>
               </ResizablePanel>
               <ResizableHandle />
-              <ResizablePanel defaultSize={50} className="relative flex flex-col items-center justify-center">
-                <div className="absolute top-1 left-1">
-                  <button
-                    onClick={() => setShowResetDialog(true)}
-                    className="w-4 h-4 rounded-full bg-red-500 hover:bg-red-700 text-white text-xs"
-                    title="Reset Timer"
-                  >
-                    R
-                  </button>
-                </div>
-                <div className="absolute top-1 font-medium text-sm">
-                  場次: {gameNumber}
-                </div>
-                <div className="text-4xl font-bold">
-                  {formatTime(time)}
-                </div>
-              </ResizablePanel>
-              <ResizableHandle />
-              <ResizablePanel defaultSize={20} className="flex flex-col items-center justify-center">
+              <ResizablePanel defaultSize={18} className="flex flex-col items-center justify-center">
                 <div className="font-bold text-red-700">{teamAName}</div>
                 {renderPlayerButtons(teamAPlayers, "A")}
               </ResizablePanel>
               <ResizableHandle />
-              <ResizablePanel defaultSize={20} className="flex flex-col items-center justify-center">
+              <ResizablePanel defaultSize={35} className="relative flex flex-col items-center justify-center">
+                <ResizablePanelGroup direction="vertical" className="min-h-full w-full">
+                  <ResizablePanel defaultSize={40} className="">
+                    
+                  </ResizablePanel>
+                  <ResizableHandle />
+                  <ResizablePanel defaultSize={60} className="">
+                    <div className="flex justify-center items-center h-full">
+                      <svg
+                        width={w*r}
+                        height={h*r}
+                        viewBox={"0 0 " + (w*r).toString() + " " + (h*r).toString()}
+                        onClick={handleChoosePositioon}
+                        onMouseMove={handleMouseMove}
+                        style={{ cursor: isHoveringAllowed ? "pointer" : "default" }}
+                        className="border border-gray-400 bg-green-50"
+                      >
+                        {/* Court Base */}
+                        <rect x={0} y={0} width={w*r} height={h*r} fill="#fff" stroke="#ccc" />
+
+                        {/* 6m Line */}
+                        <path
+                          d={sixmeterData}
+                          fill="#f97316"
+                          fillOpacity={0.4}
+                          stroke="#f97316"
+                        />
+
+                        {/* 9m Line */}
+                        <path
+                          d={ninemeterData}
+                          fill="none"
+                          stroke="#f97316"
+                          strokeDasharray="6,4"
+                        />
+
+                        {/* Distance markers */}
+                        <line x1={297.75/10*r} y1={4*3*r} x2={302.25/10*r} y2={4*3*r} stroke="#f97316" />
+                        <line x1={285/10*r} y1={7*3*r} x2={315/10*r} y2={7*3*r} stroke="#f97316" />
+
+                        {/* Last Clicked Point */}
+                        {clickPosition && (
+                          <circle cx={clickPosition.x} cy={clickPosition.y} r={5} fill="red" />
+                        )}
+                      </svg>
+                    </div>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
+              </ResizablePanel>
+              <ResizableHandle />
+              <ResizablePanel defaultSize={18} className="flex flex-col items-center justify-center">
                 <div className="font-bold text-blue-700">{teamBName}</div>
                 {renderPlayerButtons(teamBPlayers, "B")}
               </ResizablePanel>
+              <ResizableHandle />
+              <ResizablePanel defaultSize={19} className="flex flex-col items-center justify-center">
+
+              </ResizablePanel>
+
             </ResizablePanelGroup>
           </div>
         </ResizablePanel>
 
         <ResizableHandle />
 
-        <ResizablePanel defaultSize={38} className="p-2">
+        <ResizablePanel defaultSize={35} className="p-2">
           <div className="h-full overflow-y-auto">
             {renderTable()}
           </div>

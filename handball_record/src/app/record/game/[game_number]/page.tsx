@@ -71,8 +71,8 @@ export default function GameDetailPage() {
         })) as Player[];
 
         const sortPlayers = (players: Player[]) => {
-          const coaches = players.filter((p) => p.Role?.includes("Coach"));
-          const others = players.filter((p) => !p.Role?.includes("Coach"));
+          const coaches = players.filter((p) => !p.Role?.includes("Player"));
+          const others = players.filter((p) => p.Role?.includes("Player"));
           return [
             ...coaches.sort((a, b) =>
               (parseInt(a.ID || "0") || 0) - (parseInt(b.ID || "0") || 0)
@@ -171,7 +171,7 @@ export default function GameDetailPage() {
         <tbody>
           {fillRows(players, 20).map((p, idx) => (
             <tr key={idx} className="h-8">
-              <td className="border p-1 text-center">{p.Role?.includes("Coach") ? "Coach" : (p.Role?.includes("Leader") ? "Leader" : (p.Jersey_Number || ""))}</td>
+              <td className="border p-1 text-center">{p.Role?.includes("Player") ? (p.Jersey_Number || "") : (p.ID || "")}</td>
               <td className="border p-1 text-center">{p.Full_Name || ""}</td>
               <td className="border p-1 text-center"></td>
               <td className="border p-1 text-center"></td>

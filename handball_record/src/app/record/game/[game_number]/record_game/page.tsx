@@ -78,6 +78,11 @@ export default function Home() {
   const params = useParams();
   const gameNumber = decodeURIComponent(params.game_number as string);
 
+  const sortPlayers = (players: Player[]) => {
+    const others = players.filter((p) => p.Role?.includes("Player"));
+    return others.sort((a, b) => (parseInt(a.Jersey_Number || "0") || 0) - (parseInt(b.Jersey_Number || "0") || 0));
+  };
+  
   useEffect(() => {
     const fetchGameData = async () => {
       const snapshot = await getDocs(collection(db, "games"));
@@ -95,11 +100,6 @@ export default function Home() {
           ...doc.data(),
           id: doc.id,
         })) as Player[];
-
-        const sortPlayers = (players: Player[]) => {
-          const others = players.filter((p) => p.Role?.includes("Player"));
-          return others.sort((a, b) => (parseInt(a.Jersey_Number || "0") || 0) - (parseInt(b.Jersey_Number || "0") || 0));
-        };
 
         const team1 = allPlayers.filter(
           (p) => p.Group === found.Group && p.Team === found.Team1
@@ -149,10 +149,6 @@ export default function Home() {
     setIsRunning(true);
     setHasStarted(true);
     setPeriodType(type);
-  };
-
-  const startHalf = () => {
-    setShowGKDialog(true);
   };
 
   const confirmGKAndStart = () => {
@@ -236,7 +232,7 @@ export default function Home() {
       buttons.push(
         <Button
           key={i}
-          variant="outline"
+          variant={players[i]?.Position?.includes("GK") ? "secondary" : "outline"}
           size="sm"
           className="w-8 h-8 m-0.5 text-red-600"
         >
@@ -295,14 +291,14 @@ export default function Home() {
       <thead className="sticky top-0 bg-white z-10">
         <tr className="bg-gray-200 text-center">
           <th rowSpan={2}>比賽半時</th>
-          <th colSpan={2} rowSpan={2}>比賽時間</th>
-          <th colSpan={4} className="text-red-600">{teamAName}(A隊)</th>
+          <th rowSpan={2}>比賽時間</th>
+          <th colSpan={5} className="text-red-600">{teamAName}(A隊)</th>
           <th rowSpan={2}>比數</th>
-          <th colSpan={4} className="text-blue-600">{teamBName}(B隊)</th>
+          <th colSpan={5} className="text-blue-600">{teamBName}(B隊)</th>
         </tr>
         <tr className="bg-gray-200 text-center">
-          <th>背號</th><th>記事</th><th>射點</th><th>得分</th>
-          <th>背號</th><th>記事</th><th>射點</th><th>得分</th>
+          <th>背號</th><th>記事</th><th>射點</th><th>起跳點</th><th>得分</th>
+          <th>背號</th><th>記事</th><th>射點</th><th>起跳點</th><th>得分</th>
         </tr>
       </thead>
       <tbody className="overflow-y-auto">
@@ -310,7 +306,7 @@ export default function Home() {
           <tr key={i} className="text-center border-t">
             <td></td>
             <td></td>
-            <td></td><td></td><td></td><td></td>
+            <td></td><td></td><td></td><td></td><td></td>
             <td>0 : 0</td>
               <td></td><td></td><td></td><td></td>
             </tr>
@@ -415,70 +411,132 @@ export default function Home() {
                 </div>
               </ResizablePanel>
               <ResizableHandle />
-              <ResizablePanel defaultSize={18} className="flex flex-col items-center justify-center">
+              <ResizablePanel defaultSize={16} className="flex flex-col items-center justify-center">
                 <div className="font-bold text-red-700">{teamAName}</div>
                 {renderPlayerButtons(teamAPlayers, "A")}
               </ResizablePanel>
               <ResizableHandle />
-              <ResizablePanel defaultSize={35} className="relative flex flex-col items-center justify-center">
+              <ResizablePanel defaultSize={39} className="relative flex flex-col items-center justify-center">
                 <ResizablePanelGroup direction="vertical" className="min-h-full w-full">
-                  <ResizablePanel defaultSize={40} className="">
-                    
+                  <ResizablePanel defaultSize={41} className="">
+                    <div className="flex flex-row justify-center items-start mt-2 gap-0 w-full">
+                      {/* Left section */}
+                      <div className="flex flex-col gap-1 mt-1 mr-4">
+                        <Button variant="outline" size="sm" className="text-green-800 text-sm w-12 h-8">0 吊球</Button>
+                        <Button variant="outline" size="sm" className="text-green-800 text-sm w-12 h-8">SP 反</Button>
+                      </div>
+
+                      <div className="flex flex-col gap-1 mt-2 mb-6 mr-0">
+                        <Button variant="outline" size="sm" className="text-green-800 w-8 h-8">7M</Button>
+                        <Button variant="outline" size="sm" className="text-green-800 w-8 h-8">4M</Button>
+                        <Button variant="outline" size="sm" className="text-green-800 w-8 h-8">1M</Button>
+                      </div>
+
+                      {/* Center section (not overlapping, always centered with space) */}
+                      <div className="flex flex-col items-center mx-0">
+                        <div className="border-x-4 border-t-4 border-red-500 grid grid-cols-3 gap-1 p-1 mb-1">
+                          {[7, 8, 9, 4, 5, 6, 1, 2, 3].map((num) => (
+                            <div key={num} className="relative">
+                              <Button variant="outline" size="sm" className="w-12 h-8 text-green-800 font-bold">
+                                {num}
+                              </Button>
+                              {num === 8 && (
+                                <div className="absolute -top-5 left-1/2 -translate-x-1/2">
+                                  <Button variant="outline" size="sm" className="text-green-600 text-xs w-10 h-5">8M</Button>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Right side buttons */}
+                      <div className="flex flex-col gap-1 mt-2 mb-6 ml-0">
+                        <Button variant="outline" size="sm" className="text-green-800 w-8 h-8">9M</Button>
+                        <Button variant="outline" size="sm" className="text-green-800 w-8 h-8">6M</Button>
+                        <Button variant="outline" size="sm" className="text-green-800 w-8 h-8">3M</Button>
+                      </div>
+
+                      {/* Far right shot type buttons */}
+                      <div className="flex flex-col gap-1 mb-10 ml-4">
+                        <Button variant="outline" size="sm" className="text-blue-800 text-xs w-20 h-5">F 快攻射門</Button>
+                        <Button variant="outline" size="sm" className="text-blue-800 text-xs w-20 h-5">7 七米罰球</Button>
+                        <Button variant="outline" size="sm" className="text-blue-800 text-xs w-20 h-5">BT 突破射門</Button>
+                        <Button variant="outline" size="sm" className="text-blue-800 text-xs w-20 h-5">E 越區</Button>
+                        <Button variant="outline" size="sm" className="text-blue-800 text-xs w-20 h-5">B 普封</Button>
+                      </div>
+                    </div>
                   </ResizablePanel>
                   <ResizableHandle />
-                  <ResizablePanel defaultSize={60} className="">
-                    <div className="flex justify-center items-center h-full">
+                  <ResizablePanel defaultSize={59} className="">
+                    <div className="relative flex justify-center items-center h-full">
+                      {/* SVG background court */}
                       <svg
-                        width={w*r}
-                        height={h*r}
-                        viewBox={"0 0 " + (w*r).toString() + " " + (h*r).toString()}
+                        width={w * r}
+                        height={h * r}
+                        viewBox={`0 0 ${w * r} ${h * r}`}
                         onClick={handleChoosePositioon}
                         onMouseMove={handleMouseMove}
                         style={{ cursor: isHoveringAllowed ? "pointer" : "default" }}
                         className="border border-gray-400 bg-green-50"
                       >
-                        {/* Court Base */}
-                        <rect x={0} y={0} width={w*r} height={h*r} fill="#fff" stroke="#ccc" />
+                        <rect x={0} y={0} width={w * r} height={h * r} fill="#fff" stroke="#ccc" />
 
-                        {/* 6m Line */}
-                        <path
-                          d={sixmeterData}
-                          fill="#f97316"
-                          fillOpacity={0.4}
-                          stroke="#f97316"
-                        />
+                        <path d={sixmeterData} fill="#f97316" fillOpacity={0.4} stroke="#f97316" />
+                        <path d={ninemeterData} fill="none" stroke="#f97316" strokeDasharray="6,4" />
 
-                        {/* 9m Line */}
-                        <path
-                          d={ninemeterData}
-                          fill="none"
-                          stroke="#f97316"
-                          strokeDasharray="6,4"
-                        />
+                        <line x1={(297.75 / 10) * r} y1={4 * 3 * r} x2={(302.25 / 10) * r} y2={4 * 3 * r} stroke="#f97316" />
+                        <line x1={(285 / 10) * r} y1={7 * 3 * r} x2={(315 / 10) * r} y2={7 * 3 * r} stroke="#f97316" />
 
-                        {/* Distance markers */}
-                        <line x1={297.75/10*r} y1={4*3*r} x2={302.25/10*r} y2={4*3*r} stroke="#f97316" />
-                        <line x1={285/10*r} y1={7*3*r} x2={315/10*r} y2={7*3*r} stroke="#f97316" />
-
-                        {/* Last Clicked Point */}
                         {clickPosition && (
                           <circle cx={clickPosition.x} cy={clickPosition.y} r={5} fill="red" />
                         )}
                       </svg>
+
+                      {/* Overlay buttons in front of SVG */}
+                      <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-row gap-2 z-10">
+                        <Button variant="outline" size="sm" className="text-red-800 w-16 h-6">A隊得分</Button>
+                        <Button variant="outline" size="sm" className="text-green-800 w-16 h-6">未得分</Button>
+                        <Button variant="outline" size="sm" className="text-blue-800 w-16 h-6">B隊得分</Button>
+                      </div>
                     </div>
                   </ResizablePanel>
                 </ResizablePanelGroup>
               </ResizablePanel>
               <ResizableHandle />
-              <ResizablePanel defaultSize={18} className="flex flex-col items-center justify-center">
+              <ResizablePanel defaultSize={16} className="flex flex-col items-center justify-center">
                 <div className="font-bold text-blue-700">{teamBName}</div>
                 {renderPlayerButtons(teamBPlayers, "B")}
               </ResizablePanel>
               <ResizableHandle />
               <ResizablePanel defaultSize={19} className="flex flex-col items-center justify-center">
+                <ResizablePanelGroup direction="vertical" className="w-full">
+                <ResizablePanel defaultSize={67} className="flex flex-col items-center justify-center">
+                <div className="text-base font-bold text-purple-800 mb-2">記事項目</div>
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">A 助攻</Button>
+                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">Y 黃牌警告</Button>
+                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">P 傳接失誤</Button>
+                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">2' 退場2'</Button>
+                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">M 走步</Button>
+                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">R 取消資格</Button>
+                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">D 兩次運球</Button>
+                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">DR 取消+報告</Button>
+                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">O 其它犯規</Button>
+                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">S 截球</Button>
+                </div>
 
+                <Button variant="destructive" className="mt-2 w-3/5 h-7">清除紀錄</Button>
+                </ResizablePanel>
+                <ResizableHandle />
+                <ResizablePanel defaultSize={33} className="flex flex-col items-center justify-center">
+                <div className="text-l font-bold text-red-700 mt-1">列印報表</div>
+                <Button variant="secondary" className="text-red-700 w-7/10">套印官方報表</Button>
+                <Button variant="secondary" className="text-red-700 w-7/10">列印攻守技術</Button>
+                </ResizablePanel>
+                </ResizablePanelGroup>
               </ResizablePanel>
-
+              
             </ResizablePanelGroup>
           </div>
         </ResizablePanel>
@@ -585,9 +643,13 @@ export default function Home() {
                   if (teamAGK && teamBGK) {
                     confirmGKAndStart();
                     setShowGKDialog(false);
+                    setTeamAPlayers(sortPlayers(teamAPlayers));
+                    setTeamBPlayers(sortPlayers(teamBPlayers));     
                   }
                 } else {
                   setShowGKDialog(false);
+                  setTeamAPlayers(sortPlayers(teamAPlayers));
+                  setTeamBPlayers(sortPlayers(teamBPlayers));
                 }
               }}
               disabled={gkChangeMode === "start" ? !teamAGK || !teamBGK : false}

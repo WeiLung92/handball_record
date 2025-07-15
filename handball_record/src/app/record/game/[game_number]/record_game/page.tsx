@@ -74,6 +74,23 @@ export default function Home() {
   const [teamBName, setTeamBName] = useState("");
   const [teamAGK, setTeamAGK] = useState<Player | null>(null);
   const [teamBGK, setTeamBGK] = useState<Player | null>(null);
+  const [alreadyStarted, setAlreadyStarted] = useState(false);
+  const [firstTeamAGK, setFirstTeamAGK] = useState<Player | null>(null);
+  const [firstTeamBGK, setFirstTeamBGK] = useState<Player | null>(null);
+
+  const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isHoveringAllowed, setIsHoveringAllowed] = useState(false);
+  // handle record(main part)
+  const [currentHalf, setCurrentHalf] = useState<string | null>(null);
+  const [recordedRows, setRecordedRows] = useState<any[]>([]);
+  const [recording, setRecording] = useState<any>(null);
+
+  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
+  const [selectedSide, setSelectedSide] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedGoalPos, setSelectedGoalPos] = useState<string | null>(null);
+  const [teamAScore, setTeamAScore] = useState(0);
+  const [teamBScore, setTeamBScore] = useState(0);
 
   const params = useParams();
   const gameNumber = decodeURIComponent(params.game_number as string);
@@ -143,12 +160,13 @@ export default function Home() {
     return `${min}:${sec}`;
   };
 
-  const startPeriod = (duration: number, type: typeof periodType) => {
+  const startPeriod = (duration: number, type: typeof periodType, half: string) => {
     setTime(0);
     setTimeLimit(duration);
     setIsRunning(true);
     setHasStarted(true);
     setPeriodType(type);
+    setCurrentHalf(half);
   };
 
   const confirmGKAndStart = () => {
@@ -158,6 +176,10 @@ export default function Home() {
     setIsRunning(true);
     setHasStarted(true);
     setPeriodType("regular");
+    setCurrentHalf("1");
+    setAlreadyStarted(true);
+    setFirstTeamAGK(teamAGK);
+    setFirstTeamBGK(teamBGK);
   };
 
   const handlePause = () => {
@@ -223,7 +245,7 @@ export default function Home() {
       [field]: currentCount + 1,
     });
 
-    console.log(`${field} incremented to ${currentCount + 1}`);
+    // console.log(`${field} incremented to ${currentCount + 1}`);
   };
 
   const renderPlayerButtons = (players: Player[], whichteam: string) => {
@@ -232,9 +254,11 @@ export default function Home() {
       buttons.push(
         <Button
           key={i}
-          variant={players[i]?.Position?.includes("GK") ? "secondary" : "outline"}
+          variant={(selectedPlayer !== null && selectedPlayer == players[i]?.Jersey_Number && selectedSide == whichteam)? "default" : (players[i]?.Position?.includes("GK") ? "secondary" : "outline")}
           size="sm"
           className="w-8 h-8 m-0.5 text-red-600"
+          onClick={() => startNewRecord(players[i]?.Jersey_Number, whichteam)}
+          disabled={players[i] === undefined}
         >
           {players[i]?.Jersey_Number || ""}
         </Button>
@@ -250,9 +274,10 @@ export default function Home() {
             {['A', 'B', 'C', 'D'].map((label) => (
               <Button
                 key={label}
-                variant="outline"
+                variant={(selectedPlayer !== null && selectedPlayer == label && selectedSide == whichteam)? "default" : "outline"}
                 size="sm"
                 className="w-4 h-8 p-0 text-sm"
+                onClick={() => startNewRecord(label, whichteam)}
               >
                 {label}
               </Button>
@@ -286,6 +311,66 @@ export default function Home() {
     );
   };
 
+  // Start a new record row
+  const startNewRecord = (player: string, side: string) => {
+    if (!isRunning) return;
+    if (recording) return;
+    setSelectedPlayer(player);
+    setSelectedSide(side);
+    setRecording({
+      currentHalf,
+      gameTime: formatTime(time),
+      player,
+    });
+  };
+
+  // Add shot type or action
+  const selectShotOrAction = (type: string) => {
+    if (!recording || !selectedPlayer) return;
+    setSelectedType(type);
+  };
+
+  // Select shooting position
+  const selectGoalPosition = (pos: string) => {
+    if (!recording) return;
+    setSelectedGoalPos(pos);
+  };
+
+  // Final step: confirm result
+  const confirmResult = (result: string) => {
+    if (!recording || !selectedType) return;
+    const fullRow = {
+      half: currentHalf,
+      gameTime: recording.gameTime,
+      side: selectedSide,
+      player: selectedPlayer,
+      action: selectedType,
+      goalPos: selectedGoalPos,
+      jumpXY: clickPosition,
+      scoreA: (result === "A" ? teamAScore + 1 : teamAScore),
+      scoreB: (result === "B" ? teamBScore + 1 : teamBScore),
+      result,
+    };
+    if (result === "A") {
+      setTeamAScore((prev) => (prev + 1));
+    } else if (result === "B") {
+      setTeamBScore((prev) => (prev + 1));
+    }
+    setRecordedRows([...recordedRows, fullRow]);
+    resetRecording();
+    // console.log("Recorded Row:", fullRow);
+  };
+
+  // Clear current recording row
+  const resetRecording = () => {
+    setSelectedPlayer(null);
+    setSelectedSide(null);
+    setSelectedType(null);
+    setSelectedGoalPos(null);
+    setClickPosition(null);
+    setRecording(null);
+  };
+
   const renderTable = () => (
     <table className="w-full text-sm border border-black">
       <thead className="sticky top-0 bg-white z-10">
@@ -302,21 +387,51 @@ export default function Home() {
         </tr>
       </thead>
       <tbody className="overflow-y-auto">
-        {Array.from({ length: 100 }).map((_, i) => (
+        <tr className="text-center border-t">
+          <td>{alreadyStarted? "1" : ""}</td>
+          <td>{alreadyStarted? "00:00" : ""}</td>
+          <td colSpan={5}>{alreadyStarted? "比賽開始" : ""}</td>
+          <td>{0} : {0}</td>
+          <td></td><td></td><td></td><td></td><td></td>
+        </tr>
+        <tr className="text-center border-t">
+          <td>{alreadyStarted? "1" : ""}</td>
+          <td>{alreadyStarted? "00:00" : ""}</td>
+          <td>{alreadyStarted? firstTeamAGK?.Jersey_Number : ""}</td><td>{alreadyStarted? "GK" : ""}</td><td></td><td></td><td></td>
+          <td>{0} : {0}</td>
+          <td>{alreadyStarted? firstTeamBGK?.Jersey_Number : ""}</td><td>{alreadyStarted? "GK" : ""}</td><td></td><td></td><td></td>
+        </tr>
+        {recordedRows.map((row, i) => (
+            <tr key={i} className="text-center border-t">
+              
+              <td>{row.half}</td>
+              <td>{row.gameTime}</td>
+              <td>{row.side == "A" ? row.player : ""}</td>
+              <td>{row.side == "A" ? row.action : ""}</td>
+              <td>{row.side == "A" ? (row.goalPos ?? "") : ""}</td>
+              <td>{row.side == "A" ? (row.jumpXY ? `${(row.jumpXY.x).toFixed(0)},${(row.jumpXY.y).toFixed(0)}` : "") : ""}</td>
+              <td>{(row.side == "A" && row.result == "A") ? row.scoreA : ""}</td>
+              <td>{row.scoreA} : {row.scoreB}</td>
+              <td>{row.side == "B" ? row.player : ""}</td>
+              <td>{row.side == "B" ? row.action : ""}</td>
+              <td>{row.side == "B" ? (row.goalPos ?? "") : ""}</td>
+              <td>{row.side == "B" ? (row.jumpXY ? `${(row.jumpXY.x).toFixed(0)},${(row.jumpXY.y).toFixed(0)}` : "") : ""}</td>
+              <td>{(row.side == "B" && row.result == "B") ? row.scoreB : ""}</td>
+            </tr>
+          ))}
+        {Array.from({ length: 100 - recordedRows.length }).map((_, i) => (
           <tr key={i} className="text-center border-t">
             <td></td>
             <td></td>
             <td></td><td></td><td></td><td></td><td></td>
-            <td>0 : 0</td>
-              <td></td><td></td><td></td><td></td>
+            <td>{teamAScore} : {teamBScore}</td>
+            <td></td><td></td><td></td><td></td><td></td>
             </tr>
           ))}
         </tbody>
       </table>
   );
 
-  const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
-  const [isHoveringAllowed, setIsHoveringAllowed] = useState(false);
   const r = 7;
   const w = 60;
   const h = 30;
@@ -363,7 +478,7 @@ export default function Home() {
 
     if (checkIsBetween(x, y)) {
       setClickPosition({ x, y });
-      console.log("Valid click at:", { x, y });
+      // console.log("Valid click at:", { x, y });
     }
   };
   
@@ -384,9 +499,9 @@ export default function Home() {
               <ResizablePanel defaultSize={12} minSize={10} className="">
                 <div className="flex flex-col items-center justify-center gap-2 p-2">
                   <Button variant="outline" size="sm" onClick={() => {setGKChangeMode("start");setShowGKDialog(true);}} disabled={!allowStart}>上半場開始</Button>
-                  <Button variant="outline" size="sm" onClick={() => startPeriod(1800, "regular")} disabled={!allowStart}>下半場開始</Button>
-                  <Button variant="outline" size="sm" onClick={() => startPeriod(300, "extra")} disabled={!allowStart}>延長賽 I</Button>
-                  <Button variant="outline" size="sm" onClick={() => startPeriod(300, "extra")} disabled={!allowStart}>延長賽 II</Button>
+                  <Button variant="outline" size="sm" onClick={() => startPeriod(1800, "regular", "2")} disabled={!allowStart}>下半場開始</Button>
+                  <Button variant="outline" size="sm" onClick={() => startPeriod(300, "extra", "1")} disabled={!allowStart}>延長賽 I</Button>
+                  <Button variant="outline" size="sm" onClick={() => startPeriod(300, "extra", "2")} disabled={!allowStart}>延長賽 II</Button>
                   <Button variant="outline" size="sm" onClick={handlePenaltyStart} disabled={!allowStart}>罰球決勝開始</Button>
                   <Button variant="outline" size="sm" onClick={handlePeriodEnd}>半時結束</Button>
                   <Button variant="outline" size="sm" onClick={handleResume}>時間繼續</Button>
@@ -422,14 +537,14 @@ export default function Home() {
                     <div className="flex flex-row justify-center items-start mt-2 gap-0 w-full">
                       {/* Left section */}
                       <div className="flex flex-col gap-1 mt-1 mr-4">
-                        <Button variant="outline" size="sm" className="text-green-800 text-sm w-20 h-8">0 吊球</Button>
-                        <Button variant="outline" size="sm" className="text-green-800 text-sm w-20 h-8">SP 反</Button>
+                        <Button variant={selectedGoalPos == "0" ? "default" : "outline"} size="sm" className="text-green-800 text-sm w-20 h-8" onClick={() => selectGoalPosition("0")}>0 吊球</Button>
+                        <Button variant={selectedGoalPos == "SP" ? "default" : "outline"} size="sm" className="text-green-800 text-sm w-20 h-8" onClick={() => selectGoalPosition("SP")}>SP 反</Button>
                       </div>
 
                       <div className="flex flex-col gap-1 mt-2 mb-6 mr-0">
-                        <Button variant="outline" size="sm" className="text-green-800 w-8 h-8">7M</Button>
-                        <Button variant="outline" size="sm" className="text-green-800 w-8 h-8">4M</Button>
-                        <Button variant="outline" size="sm" className="text-green-800 w-8 h-8">1M</Button>
+                        <Button variant={selectedGoalPos == "7M" ? "default" : "outline"} size="sm" className="text-green-800 w-8 h-8" onClick={() => selectGoalPosition("7M")}>7M</Button>
+                        <Button variant={selectedGoalPos == "4M" ? "default" : "outline"} size="sm" className="text-green-800 w-8 h-8" onClick={() => selectGoalPosition("4M")}>4M</Button>
+                        <Button variant={selectedGoalPos == "1M" ? "default" : "outline"} size="sm" className="text-green-800 w-8 h-8" onClick={() => selectGoalPosition("1M")}>1M</Button>
                       </div>
 
                       {/* Center section (not overlapping, always centered with space) */}
@@ -437,12 +552,12 @@ export default function Home() {
                         <div className="border-x-4 border-t-4 border-red-500 grid grid-cols-3 gap-1 p-1 mb-1">
                           {[7, 8, 9, 4, 5, 6, 1, 2, 3].map((num) => (
                             <div key={num} className="relative">
-                              <Button variant="outline" size="sm" className="w-12 h-8 text-green-800 font-bold">
+                              <Button variant={selectedGoalPos == num.toString() ? "default" : "outline"} size="sm" className="w-12 h-8 text-green-800 font-bold" onClick={() => selectGoalPosition(num.toString())}>
                                 {num}
                               </Button>
                               {num === 8 && (
                                 <div className="absolute -top-5 left-1/2 -translate-x-1/2">
-                                  <Button variant="outline" size="sm" className="text-green-600 text-xs w-10 h-5">8M</Button>
+                                  <Button variant={selectedGoalPos == "8M" ? "default" : "outline"} size="sm" className="text-green-600 text-xs w-10 h-5"onClick={() => selectGoalPosition("8M")}>8M</Button>
                                 </div>
                               )}
                             </div>
@@ -452,18 +567,18 @@ export default function Home() {
 
                       {/* Right side buttons */}
                       <div className="flex flex-col gap-1 mt-2 mb-6 ml-0">
-                        <Button variant="outline" size="sm" className="text-green-800 w-8 h-8">9M</Button>
-                        <Button variant="outline" size="sm" className="text-green-800 w-8 h-8">6M</Button>
-                        <Button variant="outline" size="sm" className="text-green-800 w-8 h-8">3M</Button>
+                        <Button variant={selectedGoalPos == "9M" ? "default" : "outline"} size="sm" className="text-green-800 w-8 h-8" onClick={() => selectGoalPosition("9M")}>9M</Button>
+                        <Button variant={selectedGoalPos == "6M" ? "default" : "outline"} size="sm" className="text-green-800 w-8 h-8" onClick={() => selectGoalPosition("6M")}>6M</Button>
+                        <Button variant={selectedGoalPos == "3M" ? "default" : "outline"} size="sm" className="text-green-800 w-8 h-8" onClick={() => selectGoalPosition("3M")}>3M</Button>
                       </div>
 
                       {/* Far right shot type buttons */}
                       <div className="flex flex-col gap-1 mb-10 ml-4">
-                        <Button variant="outline" size="sm" className="text-blue-800 text-xs w-20 h-5">F 快攻射門</Button>
-                        <Button variant="outline" size="sm" className="text-blue-800 text-xs w-20 h-5">7 七米罰球</Button>
-                        <Button variant="outline" size="sm" className="text-blue-800 text-xs w-20 h-5">BT 突破射門</Button>
-                        <Button variant="outline" size="sm" className="text-blue-800 text-xs w-20 h-5">E 越區</Button>
-                        <Button variant="outline" size="sm" className="text-blue-800 text-xs w-20 h-5">B 普封</Button>
+                        <Button variant={selectedType == "F" ? "default" : "outline"} size="sm" className="text-blue-800 text-xs w-20 h-5" onClick={() => selectShotOrAction("F")}>F 快攻射門</Button>
+                        <Button variant={selectedType == "7" ? "default" : "outline"} size="sm" className="text-blue-800 text-xs w-20 h-5" onClick={() => selectShotOrAction("7")}>7 七米罰球</Button>
+                        <Button variant={selectedType == "BT" ? "default" : "outline"} size="sm" className="text-blue-800 text-xs w-20 h-5" onClick={() => selectShotOrAction("BT")}>BT 突破射門</Button>
+                        <Button variant={selectedType == "E" ? "default" : "outline"} size="sm" className="text-blue-800 text-xs w-20 h-5" onClick={() => selectShotOrAction("E")}>E 越區</Button>
+                        <Button variant={selectedType == "B" ? "default" : "outline"} size="sm" className="text-blue-800 text-xs w-20 h-5" onClick={() => selectShotOrAction("B")}>B 普封</Button>
                       </div>
                     </div>
                   </ResizablePanel>
@@ -504,9 +619,9 @@ export default function Home() {
 
                       {/* Overlay buttons in front of SVG */}
                       <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-row gap-2 z-10">
-                        <Button variant="outline" size="sm" className="text-red-800 w-16 h-6">A隊得分</Button>
-                        <Button variant="outline" size="sm" className="text-green-800 w-16 h-6">未得分</Button>
-                        <Button variant="outline" size="sm" className="text-blue-800 w-16 h-6">B隊得分</Button>
+                        <Button variant="outline" size="sm" className="text-red-800 w-16 h-6" onClick={() => confirmResult("A")}>A隊得分</Button>
+                        <Button variant="outline" size="sm" className="text-green-800 w-16 h-6" onClick={() => confirmResult("N")}>未得分</Button>
+                        <Button variant="outline" size="sm" className="text-blue-800 w-16 h-6" onClick={() => confirmResult("B")}>B隊得分</Button>
                       </div>
                     </div>
                   </ResizablePanel>
@@ -523,19 +638,19 @@ export default function Home() {
                 <ResizablePanel defaultSize={67} className="flex flex-col items-center justify-center">
                 <div className="text-base font-bold text-purple-800 mb-2">記事項目</div>
                 <div className="grid grid-cols-2 gap-1 text-xs">
-                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">A 助攻</Button>
-                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">Y 黃牌警告</Button>
-                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">P 傳接失誤</Button>
-                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">2' 退場2'</Button>
-                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">M 走步</Button>
-                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">R 取消資格</Button>
-                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">D 兩次運球</Button>
-                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">DR 取消+報告</Button>
-                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">O 其它犯規</Button>
-                  <Button variant="outline" className="w-20 h-5 text-pink-700 font-bold text-xs">S 截球</Button>
+                  <Button variant={selectedType == "A" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("A")}>A 助攻</Button>
+                  <Button variant={selectedType == "Y" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("Y")}>Y 黃牌警告</Button>
+                  <Button variant={selectedType == "P" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("P")}>P 傳接失誤</Button>
+                  <Button variant={selectedType == "2'" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("2'")}>2' 退場2'</Button>
+                  <Button variant={selectedType == "M" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("M")}>M 走步</Button>
+                  <Button variant={selectedType == "R" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("R")}>R 取消資格</Button>
+                  <Button variant={selectedType == "D" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("D")}>D 兩次運球</Button>
+                  <Button variant={selectedType == "DR" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("DR")}>DR 取消+報告</Button>
+                  <Button variant={selectedType == "O" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("O")}>O 其它犯規</Button>
+                  <Button variant={selectedType == "S" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("S")}>S 截球</Button>
                 </div>
 
-                <Button variant="destructive" className="mt-2 w-3/5 h-7">清除紀錄</Button>
+                <Button variant="destructive" className="mt-2 w-3/5 h-7" onClick={resetRecording}>清除紀錄</Button>
                 </ResizablePanel>
                 <ResizableHandle />
                 <ResizablePanel defaultSize={33} className="flex flex-col items-center justify-center">
@@ -651,14 +766,23 @@ export default function Home() {
                 if (gkChangeMode === "start") {
                   if (teamAGK && teamBGK) {
                     confirmGKAndStart();
-                    setShowGKDialog(false);
-                    setTeamAPlayers(sortPlayers(teamAPlayers));
-                    setTeamBPlayers(sortPlayers(teamBPlayers));     
+                    setShowGKDialog(false);   
                   }
                 } else {
                   setShowGKDialog(false);
-                  setTeamAPlayers(sortPlayers(teamAPlayers));
-                  setTeamBPlayers(sortPlayers(teamBPlayers));
+                  const fullRow = {
+                    half: currentHalf,
+                    gameTime: formatTime(time),
+                    side: gkChangeTeam,
+                    player: gkChangeTeam === "A" ? teamAGK?.Jersey_Number : teamBGK?.Jersey_Number,
+                    action: "GK",
+                    goalPos: "",
+                    jumpXY: "",
+                    scoreA: teamAScore,
+                    scoreB: teamBScore,
+                    result: "N",
+                  };
+                  setRecordedRows([...recordedRows, fullRow]);
                 }
               }}
               disabled={gkChangeMode === "start" ? !teamAGK || !teamBGK : false}

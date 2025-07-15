@@ -317,7 +317,7 @@ export default function Home() {
 
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
   const [isHoveringAllowed, setIsHoveringAllowed] = useState(false);
-  const r = 6;
+  const r = 7;
   const w = 60;
   const h = 30;
   const sixmeterData = [
@@ -418,12 +418,12 @@ export default function Home() {
               <ResizableHandle />
               <ResizablePanel defaultSize={39} className="relative flex flex-col items-center justify-center">
                 <ResizablePanelGroup direction="vertical" className="min-h-full w-full">
-                  <ResizablePanel defaultSize={41} className="">
+                  <ResizablePanel defaultSize={37} className="">
                     <div className="flex flex-row justify-center items-start mt-2 gap-0 w-full">
                       {/* Left section */}
                       <div className="flex flex-col gap-1 mt-1 mr-4">
-                        <Button variant="outline" size="sm" className="text-green-800 text-sm w-12 h-8">0 吊球</Button>
-                        <Button variant="outline" size="sm" className="text-green-800 text-sm w-12 h-8">SP 反</Button>
+                        <Button variant="outline" size="sm" className="text-green-800 text-sm w-20 h-8">0 吊球</Button>
+                        <Button variant="outline" size="sm" className="text-green-800 text-sm w-20 h-8">SP 反</Button>
                       </div>
 
                       <div className="flex flex-col gap-1 mt-2 mb-6 mr-0">
@@ -468,8 +468,17 @@ export default function Home() {
                     </div>
                   </ResizablePanel>
                   <ResizableHandle />
-                  <ResizablePanel defaultSize={59} className="">
+                  <ResizablePanel defaultSize={63} className="">
                     <div className="relative flex justify-center items-center h-full">
+                      <div className="absolute top-0 left-0">
+                        <button
+                          onClick={() => setClickPosition(null)}
+                          className="mr-1 w-4 h-4 rounded-full bg-red-300 hover:bg-red-500 text-white text-xs"
+                          title="Reset click position"
+                        >
+                          R
+                        </button>
+                      </div>
                       {/* SVG background court */}
                       <svg
                         width={w * r}

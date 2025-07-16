@@ -94,8 +94,8 @@ export default function RecordPage() {
     const movePlayer = (p: typeof pikachu1, leftKey: string, rightKey: string, jumpKey: string, downKey: string, isLeft: boolean) => {
       const leftBound = isLeft ? 0 : canvas.width / 2 + 5;
       const rightBound = isLeft ? canvas.width / 2 - p.width - 5 : canvas.width - p.width;
-      if (keys[leftKey] && p.x > leftBound) p.x -= 5;
-      if (keys[rightKey] && p.x < rightBound) p.x += 5;
+      if (keys[leftKey] && p.x > leftBound) p.x -= 7;
+      if (keys[rightKey] && p.x < rightBound) p.x += 7;
       if (keys[downKey] && !p.grounded) p.y += 12;
       if (keys[jumpKey] && p.grounded) {
         p.vy = -10;
@@ -156,7 +156,7 @@ export default function RecordPage() {
         const relVel = ball.vx * nx + ball.vy * ny;
 
         if (relVel < 0) {
-          const dynamicRestitution = player.vy < -2 ? 1.5 : playerRestitution;
+          const dynamicRestitution = player.vy < -2 ? 1.2 : playerRestitution;
           const impulse = -(1 + dynamicRestitution) * relVel / (1 / ballMass);
           ball.vx += (impulse * nx) / ballMass;
           ball.vy += (impulse * ny) / ballMass;

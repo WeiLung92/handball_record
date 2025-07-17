@@ -27,6 +27,7 @@ interface ball {
   vx: number;
   vy: number;
   radius: number;
+  powerHit: boolean;
 }
 
 interface pikachu {
@@ -62,7 +63,7 @@ export default function RecordPage() {
     const pikachu1 = { x: 100, y: GROUND_Y, vy: 0, width: 60, height: 60, color: 'orange', grounded: true };
     const pikachu2 = { x: 650, y: GROUND_Y, vy: 0, width: 60, height: 60, color: 'yellow', grounded: true };
 
-    const ball = { x: 400, y: 200, vx: 2, vy: -2, radius: 20 };
+    const ball = { x: 400, y: 200, vx: 2, vy: -2, radius: 20, powerHit: false };
     const damping = 0.8; // energy loss
     const restitution = 0.9; // bounciness
     const playerRestitution = 1; // player collision bounciness
@@ -132,7 +133,7 @@ export default function RecordPage() {
         }
       }
     }
-    function resolveBallPlayerCollision(ball: ball, player: pikachu) {
+    function resolveBallPlayerCollision(ball: ball, player: pikachu, isPlayer1: boolean, keys: Record<string, boolean>) {
       // Closest point from ball to rectangle
       const closestX = clamp(ball.x, player.x, player.x + player.width);
       const closestY = clamp(ball.y, player.y, player.y + player.height);
@@ -156,10 +157,33 @@ export default function RecordPage() {
         const relVel = ball.vx * nx + ball.vy * ny;
 
         if (relVel < 0) {
-          const dynamicRestitution = player.vy < -2 ? 1.2 : playerRestitution;
-          const impulse = -(1 + dynamicRestitution) * relVel / (1 / ballMass);
+          const dynamicRestitution = player.vy < -2 ? 1.5 : playerRestitution;
+
+          // 🟢 Power hit check
+          const powerKey = isPlayer1 ? keys['z'] : keys['Enter'];
+          const powerBoost = powerKey ? 2.0 : 1.0;
+
+          const impulse = -(1 + dynamicRestitution * powerBoost) * relVel / (1 / ballMass);
+
           ball.vx += (impulse * nx) / ballMass;
           ball.vy += (impulse * ny) / ballMass;
+          if (powerKey) {
+            ball.powerHit = true;
+            const powerXBoost = 20; // adjust as needed
+            ball.vx += isPlayer1 ? powerXBoost : -powerXBoost;
+          }
+
+          // After impulse applied (outside if (powerKey) block)
+          if (ball.powerHit && !powerKey) {
+            const speed = Math.hypot(ball.vx, ball.vy);
+            const normalSpeed = 6;
+            if (speed > normalSpeed) {
+              const scale = normalSpeed / speed;
+              ball.vx *= scale;
+              ball.vy *= scale;
+            }
+            ball.powerHit = false;
+          }
         }
       }
     }
@@ -185,7 +209,11 @@ export default function RecordPage() {
           ai.vy = -9;
           ai.grounded = false;
         }
+        const ballNear = Math.abs(ball.x - (ai.x + ai.width / 2)) < 60 && Math.abs(ball.y - ai.y) < 80;
+        const willPowerHit = ballApproaching && ballNear && Math.random() < 0.4; // 40% chance
 
+        // Simulate power hit key
+        keys['Enter'] = willPowerHit;
         // Apply gravity
         ai.y += ai.vy;
         ai.vy += gravity;
@@ -205,10 +233,12 @@ export default function RecordPage() {
         const leftSide = ball.x < canvas.width / 2;
         if (leftSide) {
           score2++;
+          ball.powerHit = false;
           if (score2 >= 10) endGame('Player 2');
           else resetBall(false);
         } else {
           score1++;
+          ball.powerHit = false;
           if (score1 >= 10) endGame('Player 1');
           else resetBall(true);
         }
@@ -234,8 +264,8 @@ export default function RecordPage() {
       resolveBallNetCollision(ball, net);
 
       // Ball–players
-      resolveBallPlayerCollision(ball, pikachu1);
-      resolveBallPlayerCollision(ball, pikachu2);
+      resolveBallPlayerCollision(ball, pikachu1, true, keys);
+      resolveBallPlayerCollision(ball, pikachu2, false, keys);
     };
 
     const draw = () => {
@@ -250,10 +280,23 @@ export default function RecordPage() {
       ctx.fillRect(pikachu1.x, pikachu1.y, pikachu1.width, pikachu1.height);
       ctx.fillStyle = pikachu2.color;
       ctx.fillRect(pikachu2.x, pikachu2.y, pikachu2.width, pikachu2.height);
-      ctx.fillStyle = 'red';
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-      ctx.fill();
+      if (ball.powerHit) {
+        // Flash effect: glowing yellow stroke and flicker color
+        ctx.fillStyle = Math.random() < 0.5 ? 'orange' : 'red';
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'yellow';
+        ctx.stroke();
+      } else {
+        // Normal ball
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.fillStyle = 'black';
       ctx.font = '24px Arial';
       ctx.fillText(`P1 (WASD): ${score1}`, 50, 50);
@@ -263,6 +306,7 @@ export default function RecordPage() {
     const gameLoop = () => {
       update();
       draw();
+      if (gameMode === '1p') keys['Enter'] = false;
       animationId = requestAnimationFrame(gameLoop);
     };
 

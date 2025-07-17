@@ -88,6 +88,7 @@ export default function Home() {
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [selectedSide, setSelectedSide] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [shootOrOther, setShootOrOther] = useState<boolean | null>(null);
   const [selectedGoalPos, setSelectedGoalPos] = useState<string | null>(null);
   const [teamAScore, setTeamAScore] = useState(0);
   const [teamBScore, setTeamBScore] = useState(0);
@@ -327,6 +328,7 @@ export default function Home() {
   // Add shot type or action
   const selectShotOrAction = (type: string) => {
     if (!recording || !selectedPlayer) return;
+    setShootOrOther(false);
     setSelectedType(type);
   };
 
@@ -338,12 +340,13 @@ export default function Home() {
 
   // Final step: confirm result
   const confirmResult = (result: string) => {
-    if (!recording || !selectedType) return;
+    if (!recording || shootOrOther === null) return;
     const fullRow = {
       half: currentHalf,
       gameTime: recording.gameTime,
       side: selectedSide,
       player: selectedPlayer,
+      shootOrNot: shootOrOther,
       action: selectedType,
       goalPos: selectedGoalPos,
       jumpXY: clickPosition,
@@ -368,6 +371,7 @@ export default function Home() {
     setSelectedType(null);
     setSelectedGoalPos(null);
     setClickPosition(null);
+    setShootOrOther(null);
     setRecording(null);
   };
 
@@ -377,29 +381,29 @@ export default function Home() {
         <tr className="bg-gray-200 text-center">
           <th rowSpan={2}>比賽半時</th>
           <th rowSpan={2}>比賽時間</th>
-          <th colSpan={5} className="text-red-600">{teamAName}(A隊)</th>
+          <th colSpan={4} className="text-red-600">{teamAName}(A隊)</th>
           <th rowSpan={2}>比數</th>
-          <th colSpan={5} className="text-blue-600">{teamBName}(B隊)</th>
+          <th colSpan={4} className="text-blue-600">{teamBName}(B隊)</th>
         </tr>
         <tr className="bg-gray-200 text-center">
-          <th>背號</th><th>記事</th><th>射點</th><th>起跳點</th><th>得分</th>
-          <th>背號</th><th>記事</th><th>射點</th><th>起跳點</th><th>得分</th>
+          <th>背號</th><th>記事</th><th>射點</th><th>得分</th>
+          <th>背號</th><th>記事</th><th>射點</th><th>得分</th>
         </tr>
       </thead>
       <tbody className="overflow-y-auto">
         <tr className="text-center border-t">
           <td>{alreadyStarted? "1" : ""}</td>
           <td>{alreadyStarted? "00:00" : ""}</td>
-          <td colSpan={5}>{alreadyStarted? "比賽開始" : ""}</td>
+          <td colSpan={4}>{alreadyStarted? "比賽開始" : ""}</td>
           <td>{0} : {0}</td>
-          <td></td><td></td><td></td><td></td><td></td>
+          <td></td><td></td><td></td><td></td>
         </tr>
         <tr className="text-center border-t">
           <td>{alreadyStarted? "1" : ""}</td>
           <td>{alreadyStarted? "00:00" : ""}</td>
-          <td>{alreadyStarted? firstTeamAGK?.Jersey_Number : ""}</td><td>{alreadyStarted? "GK" : ""}</td><td></td><td></td><td></td>
+          <td>{alreadyStarted? firstTeamAGK?.Jersey_Number : ""}</td><td>{alreadyStarted? "GK" : ""}</td><td></td><td></td>
           <td>{0} : {0}</td>
-          <td>{alreadyStarted? firstTeamBGK?.Jersey_Number : ""}</td><td>{alreadyStarted? "GK" : ""}</td><td></td><td></td><td></td>
+          <td>{alreadyStarted? firstTeamBGK?.Jersey_Number : ""}</td><td>{alreadyStarted? "GK" : ""}</td><td></td><td></td>
         </tr>
         {recordedRows.map((row, i) => (
             <tr key={i} className="text-center border-t">
@@ -407,15 +411,15 @@ export default function Home() {
               <td>{row.half}</td>
               <td>{row.gameTime}</td>
               <td>{row.side == "A" ? row.player : ""}</td>
-              <td>{row.side == "A" ? row.action : ""}</td>
+              <td>{row.side == "A" ? (row.shootOrNot != null ? (row.shootOrNot ? (`${(row.jumpXY.x).toFixed(0)},${(row.jumpXY.y).toFixed(0)}`) : row.action) : "") : ""}</td>
               <td>{row.side == "A" ? (row.goalPos ?? "") : ""}</td>
-              <td>{row.side == "A" ? (row.jumpXY ? `${(row.jumpXY.x).toFixed(0)},${(row.jumpXY.y).toFixed(0)}` : "") : ""}</td>
+              {/* <td>{row.side == "A" ? (row.jumpXY ? `${(row.jumpXY.x).toFixed(0)},${(row.jumpXY.y).toFixed(0)}` : "") : ""}</td> */}
               <td>{(row.side == "A" && row.result == "A") ? row.scoreA : ""}</td>
               <td>{row.scoreA} : {row.scoreB}</td>
               <td>{row.side == "B" ? row.player : ""}</td>
-              <td>{row.side == "B" ? row.action : ""}</td>
+              <td>{row.side == "B" ? (row.shootOrNot != null ? (row.shootOrNot ? (`${(row.jumpXY.x).toFixed(0)},${(row.jumpXY.y).toFixed(0)}`) : row.action) : "") : ""}</td>
               <td>{row.side == "B" ? (row.goalPos ?? "") : ""}</td>
-              <td>{row.side == "B" ? (row.jumpXY ? `${(row.jumpXY.x).toFixed(0)},${(row.jumpXY.y).toFixed(0)}` : "") : ""}</td>
+              {/* <td>{row.side == "B" ? (row.jumpXY ? `${(row.jumpXY.x).toFixed(0)},${(row.jumpXY.y).toFixed(0)}` : "") : ""}</td> */}
               <td>{(row.side == "B" && row.result == "B") ? row.scoreB : ""}</td>
             </tr>
           ))}
@@ -423,9 +427,9 @@ export default function Home() {
           <tr key={i} className="text-center border-t">
             <td></td>
             <td></td>
-            <td></td><td></td><td></td><td></td><td></td>
+            <td></td><td></td><td></td><td></td>
             <td>{teamAScore} : {teamBScore}</td>
-            <td></td><td></td><td></td><td></td><td></td>
+            <td></td><td></td><td></td><td></td>
             </tr>
           ))}
         </tbody>
@@ -477,6 +481,7 @@ export default function Home() {
     const y = e.clientY - rect.top;
 
     if (checkIsBetween(x, y)) {
+      setShootOrOther(true);
       setClickPosition({ x, y });
       // console.log("Valid click at:", { x, y });
     }
@@ -574,11 +579,11 @@ export default function Home() {
 
                       {/* Far right shot type buttons */}
                       <div className="flex flex-col gap-1 mb-10 ml-4">
-                        <Button variant={selectedType == "F" ? "default" : "outline"} size="sm" className="text-blue-800 text-xs w-20 h-5" onClick={() => selectShotOrAction("F")}>F 快攻射門</Button>
-                        <Button variant={selectedType == "7" ? "default" : "outline"} size="sm" className="text-blue-800 text-xs w-20 h-5" onClick={() => selectShotOrAction("7")}>7 七米罰球</Button>
-                        <Button variant={selectedType == "BT" ? "default" : "outline"} size="sm" className="text-blue-800 text-xs w-20 h-5" onClick={() => selectShotOrAction("BT")}>BT 突破射門</Button>
-                        <Button variant={selectedType == "E" ? "default" : "outline"} size="sm" className="text-blue-800 text-xs w-20 h-5" onClick={() => selectShotOrAction("E")}>E 越區</Button>
-                        <Button variant={selectedType == "B" ? "default" : "outline"} size="sm" className="text-blue-800 text-xs w-20 h-5" onClick={() => selectShotOrAction("B")}>B 普封</Button>
+                        <Button variant={selectedType == "F" && shootOrOther == false ? "default" : "outline"} size="sm" className="text-blue-800 text-xs w-20 h-5" onClick={() => selectShotOrAction("F")}>F 快攻射門</Button>
+                        <Button variant={selectedType == "7" && shootOrOther == false ? "default" : "outline"} size="sm" className="text-blue-800 text-xs w-20 h-5" onClick={() => selectShotOrAction("7")}>7 七米罰球</Button>
+                        <Button variant={selectedType == "BT" && shootOrOther == false ? "default" : "outline"} size="sm" className="text-blue-800 text-xs w-20 h-5" onClick={() => selectShotOrAction("BT")}>BT 突破射門</Button>
+                        <Button variant={selectedType == "E" && shootOrOther == false ? "default" : "outline"} size="sm" className="text-blue-800 text-xs w-20 h-5" onClick={() => selectShotOrAction("E")}>E 越區</Button>
+                        <Button variant={selectedType == "B" && shootOrOther == false ? "default" : "outline"} size="sm" className="text-blue-800 text-xs w-20 h-5" onClick={() => selectShotOrAction("B")}>B 普封</Button>
                       </div>
                     </div>
                   </ResizablePanel>
@@ -587,7 +592,7 @@ export default function Home() {
                     <div className="relative flex justify-center items-center h-full">
                       <div className="absolute top-0 left-0">
                         <button
-                          onClick={() => setClickPosition(null)}
+                          onClick={() => {setClickPosition(null); setShootOrOther(null);}}
                           className="mr-1 w-4 h-4 rounded-full bg-red-300 hover:bg-red-500 text-white text-xs"
                           title="Reset click position"
                         >
@@ -612,7 +617,7 @@ export default function Home() {
                         <line x1={(297.75 / 10) * r} y1={4 * 3 * r} x2={(302.25 / 10) * r} y2={4 * 3 * r} stroke="#f97316" />
                         <line x1={(285 / 10) * r} y1={7 * 3 * r} x2={(315 / 10) * r} y2={7 * 3 * r} stroke="#f97316" />
 
-                        {clickPosition && (
+                        {(clickPosition && shootOrOther) && (
                           <circle cx={clickPosition.x} cy={clickPosition.y} r={5} fill="red" />
                         )}
                       </svg>
@@ -638,16 +643,16 @@ export default function Home() {
                 <ResizablePanel defaultSize={67} className="flex flex-col items-center justify-center">
                 <div className="text-base font-bold text-purple-800 mb-2">記事項目</div>
                 <div className="grid grid-cols-2 gap-1 text-xs">
-                  <Button variant={selectedType == "A" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("A")}>A 助攻</Button>
-                  <Button variant={selectedType == "Y" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("Y")}>Y 黃牌警告</Button>
-                  <Button variant={selectedType == "P" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("P")}>P 傳接失誤</Button>
-                  <Button variant={selectedType == "2'" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("2'")}>2' 退場2'</Button>
-                  <Button variant={selectedType == "M" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("M")}>M 走步</Button>
-                  <Button variant={selectedType == "R" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("R")}>R 取消資格</Button>
-                  <Button variant={selectedType == "D" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("D")}>D 兩次運球</Button>
-                  <Button variant={selectedType == "DR" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("DR")}>DR 取消+報告</Button>
-                  <Button variant={selectedType == "O" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("O")}>O 其它犯規</Button>
-                  <Button variant={selectedType == "S" ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("S")}>S 截球</Button>
+                  <Button variant={selectedType == "A" && shootOrOther == false ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("A")}>A 助攻</Button>
+                  <Button variant={selectedType == "Y" && shootOrOther == false ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("Y")}>Y 黃牌警告</Button>
+                  <Button variant={selectedType == "P" && shootOrOther == false ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("P")}>P 傳接失誤</Button>
+                  <Button variant={selectedType == "2'" && shootOrOther == false ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("2'")}>2' 退場2'</Button>
+                  <Button variant={selectedType == "M" && shootOrOther == false ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("M")}>M 走步</Button>
+                  <Button variant={selectedType == "R" && shootOrOther == false ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("R")}>R 取消資格</Button>
+                  <Button variant={selectedType == "D" && shootOrOther == false ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("D")}>D 兩次運球</Button>
+                  <Button variant={selectedType == "DR" && shootOrOther == false ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("DR")}>DR 取消+報告</Button>
+                  <Button variant={selectedType == "O" && shootOrOther == false ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("O")}>O 其它犯規</Button>
+                  <Button variant={selectedType == "S" && shootOrOther == false ? "default" : "outline"} className="w-20 h-5 text-pink-700 font-bold text-xs" onClick={() => selectShotOrAction("S")}>S 截球</Button>
                 </div>
 
                 <Button variant="destructive" className="mt-2 w-3/5 h-7" onClick={resetRecording}>清除紀錄</Button>

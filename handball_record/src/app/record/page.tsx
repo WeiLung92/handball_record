@@ -2,18 +2,20 @@
 
 import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
+import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
+  IconUserCircle,
+  IconFileUpload,
+  IconBallFootball,
+  IconUsersGroup,
+  IconPlayHandball,
+  IconLogout
+} from "@tabler/icons-react";
+import { motion } from "motion/react";
+import { cn } from "@/lib/utils";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
+import { Icon } from "lucide-react";
 
 interface net {
   x: number;
@@ -45,8 +47,47 @@ export default function RecordPage() {
   const [gameState, setGameState] = useState<'init' | 'playing' | 'ended'>('init');
   const [winner, setWinner] = useState<string>('');
   const [gameMode, setGameMode] = useState<'none' | '1p' | '2p'>('none');
+  const user = auth.currentUser;
 
-  
+  const links = [
+    {
+      label: "前往上傳頁面",
+      href: "/upload",
+      icon: (
+        <IconFileUpload className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+      ),
+    },
+    {
+      label: "查看隊伍與選手",
+      href: "/record/team",
+      icon: (
+        <IconUsersGroup className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+      ),
+    },
+    {
+      label: "查看賽程與結果",
+      href: "/record/game",
+      icon: (
+        <IconPlayHandball className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+      ),
+    },
+    // {
+    //   label: "Logout",
+    //   href: "#",
+    //   icon: (
+    //     <IconArrowLeft className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+    //   ),
+    // },
+  ];
+  const [openSidebar, setOpenSidebar] = useState(false);
+   const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push("/login");
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -332,31 +373,44 @@ export default function RecordPage() {
 
 
   return (
-    <div className="relative flex flex-row justify-start ">
-      <SidebarProvider>
-        <Sidebar>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>記錄頁面</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => router.push("/upload")}>前往上傳頁面</SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => router.push("/record/team")}>查看隊伍與選手</SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => router.push("/record/game")}>查看賽程與結果</SidebarMenuButton>
-                  </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        </Sidebar>
-        <SidebarTrigger/>
-      </SidebarProvider>
-      <div className="relative flex flex-col items-center justify-center bg-blue-100">
+    <div className={cn(
+        "mx-auto flex w-full flex-1 flex-col overflow-hidden rounded-md border border-neutral-200 bg-gray-100 md:flex-row dark:border-neutral-700 dark:bg-neutral-800",
+        "h-screen", 
+      )}>
+
+      <Sidebar open={openSidebar} setOpen={setOpenSidebar}>
+        <SidebarBody className="justify-between gap-10">
+          <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
+            {openSidebar ? <Logo /> : <LogoIcon />}
+            <div className="mt-8 flex flex-col gap-2">
+              {links.map((link, idx) => (
+                <SidebarLink key={idx} link={link} />
+              ))}
+            </div>
+          </div>
+           <div className="px-4 py-2 border-t">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 cursor-pointer"
+            >
+              <IconLogout className="h-5 w-5" />
+              {openSidebar && "Logout"}
+            </button>
+          </div>
+          <div>
+            <SidebarLink
+              link={{
+                label: user?.email || "Guest",
+                href: "/record",
+                icon: (
+                  <IconUserCircle className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+                ),
+              }}
+            />
+          </div>
+        </SidebarBody>
+      </Sidebar>
+      <div className="relative flex flex-col items-center justify-center bg-blue-100 w-full">
           {gameState !== 'playing' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 z-10">
             {gameState === 'init' && gameMode === 'none' && (
@@ -392,3 +446,31 @@ export default function RecordPage() {
     </div>
   );
 }
+export const Logo = () => {
+  return (
+    <a
+      href="/record"
+      className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
+    >
+      {/* <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" /> */}
+      <IconBallFootball className="h-6 w-6 shrink-0 text-neutral-700 dark:text-neutral-200"/>
+      <motion.span
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="font-medium whitespace-pre text-black dark:text-white"
+      >
+        記錄頁面
+      </motion.span>
+    </a>
+  );
+};
+export const LogoIcon = () => {
+  return (
+    <a
+      href="#"
+      className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
+    >
+      <IconBallFootball className="h-6 w-6 shrink-0 text-neutral-700 dark:text-neutral-200"/>
+    </a>
+  );
+};

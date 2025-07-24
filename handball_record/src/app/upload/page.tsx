@@ -22,6 +22,7 @@ import {
   DialogTitle,
   DialogFooter
 } from "@/components/ui/dialog";
+import { FileUpload } from "@/components/ui/file-upload";
 
 export default function UploadPage() {
   const [isUploading, setIsUploading] = useState(false);
@@ -68,8 +69,8 @@ export default function UploadPage() {
     await Promise.all(deletions);
   };
 
-  const handlePlayerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handlePlayerUpload = async (files: File[]) => {
+    const file = files?.[0];
     if (!file) return;
 
     setIsUploading(true);
@@ -116,8 +117,8 @@ export default function UploadPage() {
       .padStart(2, "0")}`;
   };
 
-  const handleGamesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleGamesUpload = async (files: File[]) => {
+    const file = files?.[0];
     if (!file) return;
 
     setIsUploading(true);
@@ -176,13 +177,14 @@ export default function UploadPage() {
           <DialogHeader>
             <DialogTitle>請選擇選手名單檔案</DialogTitle>
           </DialogHeader>
-          <input
+          {/* <input
             type="file"
             accept=".xls,.xlsx,.xlsm"
             onChange={handlePlayerUpload}
             disabled={isUploading}
             className="block my-4"
-          />
+          /> */}
+          <FileUpload onChange={handlePlayerUpload}/>
           <DialogFooter>
             <p className="text-gray-700 font-medium text-center w-full">{status}</p>
           </DialogFooter>
@@ -198,13 +200,14 @@ export default function UploadPage() {
           <DialogHeader>
             <DialogTitle>請選擇賽程檔案</DialogTitle>
           </DialogHeader>
-          <input
+          {/* <input
             type="file"
             accept=".xls,.xlsx,.xlsm"
             onChange={handleGamesUpload}
             disabled={isUploading}
             className="block my-4"
-          />
+          /> */}
+          <FileUpload onChange={handleGamesUpload}/>
           <DialogFooter>
             <p className="text-gray-700 font-medium text-center w-full">{gameStatus}</p>
           </DialogFooter>

@@ -92,6 +92,9 @@ export default function Home() {
   const [selectedGoalPos, setSelectedGoalPos] = useState<string | null>(null);
   const [teamAScore, setTeamAScore] = useState(0);
   const [teamBScore, setTeamBScore] = useState(0);
+  const [comfirmSameSide, setComfirmSameSide] = useState(false);
+  const [comfirmWhichSide, setComfirmWhichSide] = useState<string>("");
+  const [comfirmSameSideDialog, setComfirmSameSideDialog] = useState(false);
 
   const params = useParams();
   const gameNumber = decodeURIComponent(params.game_number as string);
@@ -202,13 +205,18 @@ export default function Home() {
   };
 
   const handlePeriodEnd = () => {
-    if ((periodType === "regular" && time >= 1800) || (periodType === "extra" && time >= 300)) {
+    if ((periodType === "regular") || (periodType === "extra")) {
       setTime(0);
       setTimeLimit(1800);
       setHasStarted(false);
       setIsRunning(false);
       setPeriodType("none");
-    }
+      const fullRow = {
+        gameTime: "半時結束",
+      };
+      setRecordedRows([...recordedRows, fullRow]);
+      resetRecording();
+      }
   };
 
   const allowStart = periodType === "none" || time >= timeLimit;
@@ -341,6 +349,11 @@ export default function Home() {
   // Final step: confirm result
   const confirmResult = (result: string) => {
     if (!recording || shootOrOther === null) return;
+    if(selectedSide != result && result !== "N" && !comfirmSameSide) {
+      setComfirmWhichSide(result);
+      setComfirmSameSideDialog(true);
+      return;
+    }
     const fullRow = {
       half: currentHalf,
       gameTime: recording.gameTime,
@@ -366,6 +379,8 @@ export default function Home() {
 
   // Clear current recording row
   const resetRecording = () => {
+    setComfirmSameSide(false);
+    setComfirmWhichSide("");
     setSelectedPlayer(null);
     setSelectedSide(null);
     setSelectedType(null);
@@ -379,6 +394,7 @@ export default function Home() {
     <table className="w-full text-sm border border-black">
       <thead className="sticky top-0 bg-white z-10">
         <tr className="bg-gray-200 text-center">
+          <th rowSpan={2}>刪除</th>
           <th rowSpan={2}>比賽半時</th>
           <th rowSpan={2}>比賽時間</th>
           <th colSpan={4} className="text-red-600">{teamAName}(A隊)</th>
@@ -392,6 +408,7 @@ export default function Home() {
       </thead>
       <tbody className="overflow-y-auto">
         <tr className="text-center border-t">
+          <td></td>
           <td>{alreadyStarted? "1" : ""}</td>
           <td>{alreadyStarted? "00:00" : ""}</td>
           <td colSpan={4}>{alreadyStarted? "比賽開始" : ""}</td>
@@ -399,6 +416,7 @@ export default function Home() {
           <td></td><td></td><td></td><td></td>
         </tr>
         <tr className="text-center border-t">
+          <td></td>
           <td>{alreadyStarted? "1" : ""}</td>
           <td>{alreadyStarted? "00:00" : ""}</td>
           <td>{alreadyStarted? firstTeamAGK?.Jersey_Number : ""}</td><td>{alreadyStarted? "GK" : ""}</td><td></td><td></td>
@@ -407,7 +425,24 @@ export default function Home() {
         </tr>
         {recordedRows.map((row, i) => (
             <tr key={i} className="text-center border-t">
-              
+              <td>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    const newRecords = [...recordedRows];
+                    newRecords.splice(i, 1);
+                    setRecordedRows(newRecords);
+                    if(row.side === "A") {
+                      setTeamAScore((prev) => (prev - (row.result === "A" ? 1 : 0)));
+                    }else if(row.side === "B") {
+                      setTeamBScore((prev) => (prev - (row.result === "B" ? 1 : 0)));
+                    }
+                  }}
+                >
+                  -
+                </Button>
+              </td>
               <td>{row.half}</td>
               <td>{row.gameTime}</td>
               <td>{row.side == "A" ? row.player : ""}</td>
@@ -425,6 +460,7 @@ export default function Home() {
           ))}
         {Array.from({ length: 100 - recordedRows.length }).map((_, i) => (
           <tr key={i} className="text-center border-t">
+            <td></td>
             <td></td>
             <td></td>
             <td></td><td></td><td></td><td></td>
@@ -780,6 +816,7 @@ export default function Home() {
                     gameTime: formatTime(time),
                     side: gkChangeTeam,
                     player: gkChangeTeam === "A" ? teamAGK?.Jersey_Number : teamBGK?.Jersey_Number,
+                    shootOrNot: false,
                     action: "GK",
                     goalPos: "",
                     jumpXY: "",
@@ -795,6 +832,22 @@ export default function Home() {
               {gkChangeMode === "start" ? "確認並開始比賽" : "確認更換守門員"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={comfirmSameSideDialog} onOpenChange={setComfirmSameSideDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>得分跟你選的球員不同邊，確定沒錯嗎？</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="secondary" onClick={() => {setComfirmSameSideDialog(false); setComfirmWhichSide("");}}>
+              取消並重選
+            </Button>
+            <Button variant="destructive" onClick={() => {setComfirmSameSideDialog(false); setComfirmSameSide(true); confirmResult(comfirmWhichSide);}}>
+              確定並紀錄
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

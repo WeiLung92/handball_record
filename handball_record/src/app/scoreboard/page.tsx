@@ -1,29 +1,38 @@
-const playerStats = [
-  { name: "王小明", goals: 3, assists: 1, misses: 2 },
-  { name: "陳大文", goals: 1, assists: 0, misses: 1 },
-  { name: "李小華", goals: 2, assists: 2, misses: 0 },
-];
+"use client";
+
+import { useEffect, useState } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { HoverEffect } from "@/components/ui/card-hover-effect";
 
 export default function ScoreboardPage() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-center">球員成績表</h1>
+  const [groups, setGroups] = useState<string[]>([]);
 
-      <div className="space-y-4">
-        {playerStats.map((player, index) => (
-          <div
-            key={index}
-            className="flex justify-between items-center p-4 border rounded-md bg-gray-100"
-          >
-            <div className="text-lg font-semibold">{player.name}</div>
-            <div className="flex gap-4 text-sm sm:text-base">
-              <span>🎯 得分: {player.goals}</span>
-              <span>💨 助攻: {player.assists}</span>
-              <span>❌ 失誤: {player.misses}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+  useEffect(() => {
+    const fetchGroups = async () => {
+      const snapshot = await getDocs(collection(db, "players"));
+      const groupSet = new Set<string>();
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.Group) {
+          groupSet.add(data.Group);
+        }
+      });
+
+      setGroups(Array.from(groupSet));
+    };
+
+    fetchGroups();
+  }, []);
+  const projects = groups.map((group) => ({
+    title: group,
+    description: ``,
+    link: `/scoreboard/${group}`, // or dynamically route if needed
+  }));
+  return (
+    <div className="max-w-5xl mx-auto px-8">
+      <HoverEffect items={projects} />
     </div>
   );
 }

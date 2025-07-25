@@ -17,9 +17,9 @@ import {
 import { RadioGroup, RadioGroupItem} from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { db } from "@/lib/firebase";
-import { doc, collection, getDocs, updateDoc } from "firebase/firestore";
+import { doc, collection, getDocs, updateDoc, addDoc, query, where } from "firebase/firestore";
 import { useParams } from "next/navigation";
-import { stringify } from "querystring";
+import { useRouter } from "next/navigation";
 
 interface Player {
   id?: string;
@@ -95,7 +95,9 @@ export default function Home() {
   const [comfirmSameSide, setComfirmSameSide] = useState(false);
   const [comfirmWhichSide, setComfirmWhichSide] = useState<string>("");
   const [comfirmSameSideDialog, setComfirmSameSideDialog] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
+  const router = useRouter();
   const params = useParams();
   const gameNumber = decodeURIComponent(params.game_number as string);
 
@@ -531,6 +533,187 @@ export default function Home() {
     setIsHoveringAllowed(checkIsBetween(x, y));
   };
 
+const saveAllGameRecords = async () => {
+  setIsSaving(true); 
+  try {
+    const snapshot = await getDocs(collection(db, "games"));
+    const found = snapshot.docs
+      .map((doc) => ({ ...(doc.data() as Game), id: doc.id }))
+      .find((g) => g.Game_Number == parseInt(gameNumber));
+
+    if (!found) {
+      console.error("Game not found");
+      setIsSaving(false);
+      return;
+    }
+
+    const playerStats: Record<
+      string,
+      {
+        Goals: number;
+        Attempts: number;
+        Saves: number;
+        Total_Shots: number;
+        YC: number;
+        TwoM: number;
+        RC: number;
+        DR: number;
+        Miss: number;
+      }
+    > = {};
+
+    const gameRef = doc(db, "games", found.id);
+    const recordsRef = collection(gameRef, "records");
+
+    var GKAkey = `${teamAName}_${firstTeamAGK?.Jersey_Number}`;
+    var GKBkey = `${teamBName}_${firstTeamBGK?.Jersey_Number}`;
+
+    for (const row of recordedRows) {
+      await addDoc(recordsRef, {
+        ...row,
+        timestamp: new Date(),
+      });
+
+      const playerId = row.player;
+      if (!playerId) continue;
+      const team = row.side === "A" ? teamAName : teamBName;
+      if (!team) continue;
+
+      const key = `${team}_${playerId}`;
+      if (!playerStats[key]) {
+        playerStats[key] = {
+          Goals: 0,
+          Attempts: 0,
+          Saves: 0,
+          Total_Shots: 0,
+          YC: 0,
+          TwoM: 0,
+          RC: 0,
+          DR: 0,
+          Miss: 0,
+        };
+      }
+      if(!playerStats[GKAkey]) {
+        playerStats[GKAkey] = {
+          Goals: 0,
+          Attempts: 0,
+          Saves: 0,
+          Total_Shots: 0,
+          YC: 0,
+          TwoM: 0,
+          RC: 0,
+          DR: 0,
+          Miss: 0,
+        };
+      }
+      if(!playerStats[GKBkey]) {
+        playerStats[GKBkey] = {
+          Goals: 0,
+          Attempts: 0,
+          Saves: 0,
+          Total_Shots: 0,
+          YC: 0,
+          TwoM: 0,
+          RC: 0,
+          DR: 0,
+          Miss: 0,
+        };
+      }
+      const stat = playerStats[key];
+
+      if (row.result == "A" || row.result == "B") {
+        stat.Goals += 1;
+        stat.Attempts += 1;
+        if(row.result == "A"){
+          playerStats[GKBkey].Total_Shots += 1;
+          // console.log("Goal for", GKBkey);
+        }
+        if(row.result == "B"){
+          playerStats[GKAkey].Total_Shots += 1;
+          // console.log("Goal for", GKAkey);
+        }
+      } else if (row.result == "N") {
+        if(row.shootOrNot || row.action == "F" || row.action == "7" || row.action == "BT" || row.action == "E" || row.action == "B"){
+          stat.Attempts += 1;
+          if(row.action != "E"){
+            if(row.side == "A"){
+              playerStats[GKBkey].Saves += 1;
+              playerStats[GKBkey].Total_Shots += 1;
+              // console.log("Save for", GKBkey);
+            }
+            if(row.side == "B"){
+              playerStats[GKAkey].Saves += 1;
+              playerStats[GKAkey].Total_Shots += 1;
+              // console.log("Save for", GKAkey);
+            }
+          }
+        }else if(row.action == "Y"){
+          stat.YC += 1;
+          // console.log("Yellow Card for", key);
+        }else if(row.action == "2'"){
+          stat.TwoM += 1;
+        }else if(row.action == "R"){
+          stat.RC += 1;
+          // console.log("Red Card for", key);
+        }else if(row.action == "DR"){
+          stat.DR += 1;
+        }else if(row.action == "A"){
+
+        }else if(row.action == "S"){
+
+        }else if(row.action == "GK"){
+          if(row.side == "A"){
+            GKAkey = `${teamAName}_${row.player}`;
+            // console.log("GK Change for", GKAkey);
+          }
+          if(row.side == "B"){
+            GKBkey = `${teamBName}_${row.player}`;
+            // console.log("GK Change for", GKBkey);
+          }
+        }else{
+          stat.Miss += 1;
+        }
+      }
+    }
+
+    const allPlayersSnapshot = await getDocs(collection(db, "players"));
+
+    for (const [key, stat] of Object.entries(playerStats)) {
+      const [team, jersey] = key.split("_");
+
+      const matchedDoc = allPlayersSnapshot.docs.find(
+        (doc) =>
+          doc.data().Team == team &&
+          doc.data().Jersey_Number == jersey
+      );
+
+      if (matchedDoc) {
+        const docRef = doc(db, "players", matchedDoc.id);
+        const prevData = matchedDoc.data();
+
+        // Merge with existing stats
+        await updateDoc(docRef, {
+          Goals: (parseInt(prevData.Goals || "0") || 0) + stat.Goals,
+          Attempts: (parseInt(prevData.Attempts || "0") || 0) + stat.Attempts,
+          Saves: (parseInt(prevData.Saves || "0") || 0) + stat.Saves,
+          Total_Shots: (parseInt(prevData.Total_Shots || "0") || 0) + stat.Total_Shots,
+          YC: (parseInt(prevData.YC || "0") || 0) + stat.YC,
+          TwoM: (parseInt(prevData.TwoM || "0") || 0) + stat.TwoM,
+          RC: (parseInt(prevData.RC || "0") || 0) + stat.RC,
+          DR: (parseInt(prevData.DR || "0") || 0) + stat.DR,
+          Miss: (parseInt(prevData.Miss || "0") || 0) + stat.Miss,
+        });
+      }
+    }
+
+    console.log("Game record document added.");
+  } catch (err) {
+    console.error("Error saving game records:", err);
+  }
+  router.push(`/record/game/${gameNumber}`);
+  setIsSaving(false);
+};
+
   return (
     <div className="h-screen w-screen p-2">
       <ResizablePanelGroup direction="vertical" className="min-h-full w-full border rounded">
@@ -697,7 +880,7 @@ export default function Home() {
                 <ResizablePanel defaultSize={33} className="flex flex-col items-center justify-center">
                 <div className="text-l font-bold text-red-700 mt-1">列印報表</div>
                 <Button variant="secondary" className="text-red-700 w-7/10">套印官方報表</Button>
-                <Button variant="secondary" className="text-red-700 w-7/10">列印攻守技術</Button>
+                <Button variant="secondary" className="text-red-700 w-7/10" onClick={saveAllGameRecords}>儲存並更新</Button>
                 </ResizablePanel>
                 </ResizablePanelGroup>
               </ResizablePanel>
@@ -851,6 +1034,13 @@ export default function Home() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={isSaving} onOpenChange={() => {}}>
+        <DialogContent className="flex items-center justify-center">
+          <DialogHeader>
+            <DialogTitle className="text-center text-lg">正在儲存比賽紀錄...</DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

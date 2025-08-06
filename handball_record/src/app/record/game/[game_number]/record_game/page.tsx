@@ -448,13 +448,13 @@ export default function Home() {
               <td>{row.half}</td>
               <td>{row.gameTime}</td>
               <td>{row.side == "A" ? row.player : ""}</td>
-              <td>{row.side == "A" ? (row.shootOrNot != null ? (row.shootOrNot ? (`${(row.jumpXY.x).toFixed(0)},${(row.jumpXY.y).toFixed(0)}`) : row.action) : "") : ""}</td>
+              <td>{row.side == "A" ? (row.shootOrNot != null ? (row.shootOrNot ? (getZone(row.jumpXY.x, row.jumpXY.y)) : row.action) : "") : ""}</td>
               <td>{row.side == "A" ? (row.goalPos ?? "") : ""}</td>
               {/* <td>{row.side == "A" ? (row.jumpXY ? `${(row.jumpXY.x).toFixed(0)},${(row.jumpXY.y).toFixed(0)}` : "") : ""}</td> */}
               <td>{(row.side == "A" && row.result == "A") ? row.scoreA : ""}</td>
               <td>{row.scoreA} : {row.scoreB}</td>
               <td>{row.side == "B" ? row.player : ""}</td>
-              <td>{row.side == "B" ? (row.shootOrNot != null ? (row.shootOrNot ? (`${(row.jumpXY.x).toFixed(0)},${(row.jumpXY.y).toFixed(0)}`) : row.action) : "") : ""}</td>
+              <td>{row.side == "B" ? (row.shootOrNot != null ? (row.shootOrNot ? (getZone(row.jumpXY.x, row.jumpXY.y)) : row.action) : "") : ""}</td>
               <td>{row.side == "B" ? (row.goalPos ?? "") : ""}</td>
               {/* <td>{row.side == "B" ? (row.jumpXY ? `${(row.jumpXY.x).toFixed(0)},${(row.jumpXY.y).toFixed(0)}` : "") : ""}</td> */}
               <td>{(row.side == "B" && row.result == "B") ? row.scoreB : ""}</td>
@@ -488,10 +488,56 @@ export default function Home() {
     `l ${0 * r} ${9 * r}`,
     `c ${0 * r} ${12 * r} ${13.5 * r} ${18 * r} ${25.5 * r} ${18 * r}`,
     `l ${9 * r} ${0 * r}`,
-    `c ${12 * r} ${0 * r} ${27 * r} ${-6 * r} ${27 * r} ${-18 * r}`,
+    `c ${12 * r} ${0 * r} ${25.5 * r} ${-6 * r} ${25.5 * r} ${-18 * r}`,
     `l ${0 * r} ${-9 * r}`
   ].join(" ");
 
+  function getZone(x: number, y: number): string {
+    const r = 7;
+
+    if(x >= 20*r && x <= 40*r){
+      if(y <= 22.5*r){
+        return "6C";
+      }else{
+        return "9C";
+      }
+    }else if(x >= 50*r+10){
+      if(x - 6*y > 0){
+        return "RW";
+      }else{
+        if((x-40*r)*(x-40*r) + y*y < 150*150){
+          return "6R";
+        }else{
+          return "9R";
+        }
+      }
+    }else if(x <= 10*r-10){
+      if(x + 6*y < 420){
+        return "LW";
+      }else{
+        if((x-20*r)*(x-20*r) + y*y < 150*150){
+          return "6L";
+        }else{
+          return "9L";
+        }
+      }
+    }else{
+      if(x >= 30*r){
+        if((x-40*r)*(x-40*r) + y*y < 150*150){
+          return "6R";
+        }else{
+          return "9R";
+        }
+      }else{
+        if((x-20*r)*(x-20*r) + y*y < 150*150){
+          return "6L";
+        }else{
+          return "9L";
+        }
+      }
+    }
+    return "?";
+  }
   const checkIsBetween = (x: number, y: number) => {
     const centerX = 30*r;
     const y6 = 18*r;
@@ -521,7 +567,7 @@ export default function Home() {
     if (checkIsBetween(x, y)) {
       setShootOrOther(true);
       setClickPosition({ x, y });
-      // console.log("Valid click at:", { x, y });
+      console.log("Valid click at:", { x, y });
     }
   };
   

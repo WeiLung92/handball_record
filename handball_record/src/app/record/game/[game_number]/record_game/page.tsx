@@ -752,6 +752,9 @@ const saveAllGameRecords = async () => {
       }
     }
 
+    await updateDoc(gameRef, {
+      Recorded: true,
+    });
     console.log("Game record document added.");
   } catch (err) {
     console.error("Error saving game records:", err);

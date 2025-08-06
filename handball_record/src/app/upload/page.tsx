@@ -145,12 +145,14 @@ export default function UploadPage() {
           ...row,
           Date: date,
           Time: time,
+          Recorded: false,
         });
 
         await setDoc(docRef, {
           ...row,
           Date: date,
           Time: time,
+          Recorded: false,
           id: docRef.id,
         });
       });
